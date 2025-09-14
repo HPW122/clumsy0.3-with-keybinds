@@ -20,6 +20,7 @@ Module* modules[MODULE_CNT] = {
 };
 
 volatile short sendState = SEND_STATUS_NONE;
+volatile BOOL running = FALSE;  // 添加运行状态标志
 
 // global iup handlers
 static Ihandle *dialog, *topFrame, *bottomFrame; 
@@ -124,7 +125,7 @@ EAT_SPACE:  while (isspace(*current)) { ++current; }
 LRESULT CALLBACK LowLevelKeyboardProc( int nCode, WPARAM wParam, LPARAM lParam )
 {
    char pressedKey;
-   // Declare a pointer to the KBDLLHOOKSTRUCTdsad
+   // Declare a pointer to the KBDLLHOOKSTRUCT
    KBDLLHOOKSTRUCT *pKeyBoard = (KBDLLHOOKSTRUCT *)lParam;
    switch( wParam )
    {
@@ -139,12 +140,13 @@ LRESULT CALLBACK LowLevelKeyboardProc( int nCode, WPARAM wParam, LPARAM lParam )
        break;
    }
 
-    if(pressedKey == 116)
-    {
-        uiStartCb(NULL);
-    } else if(pressedKey == 117)
-    {
-        uiStopCb(NULL);
+    // F5 key - toggle start/stop
+    if (pressedKey == 116) {
+        if (running) {
+            uiStopCb(NULL);
+        } else {
+            uiStartCb(NULL);
+        }
     }
     LOG("Character: %d", pressedKey);
 
@@ -157,6 +159,9 @@ void init(int argc, char* argv[]) {
     Ihandle *topVbox, *bottomVbox, *dialogVBox, *controlHbox;
     Ihandle *noneIcon, *doingIcon, *errorIcon;
     char* arg_value = NULL;
+
+    // Initialize running state
+    running = FALSE;
 
     // fill in config
     loadConfig();
@@ -417,6 +422,9 @@ static int uiStartCb(Ihandle *ih) {
     IupSetCallback(filterButton, "ACTION", uiStopCb);
     IupSetAttribute(timer, "RUN", "YES");
 
+    // Set running state
+    running = TRUE;
+
     return IUP_DEFAULT;
 }
 
@@ -446,7 +454,10 @@ static int uiStopCb(Ihandle *ih) {
     sendState = SEND_STATUS_NONE;
     IupSetAttribute(stateIcon, "IMAGE", "none_icon");
 
-    showStatus("Stopped. To begin again, edit criteria and click Start.");
+    // Clear running state
+    running = FALSE;
+
+    showStatus("Stopped. To begin again, edit criteria and click Start or press F5.");
     return IUP_DEFAULT;
 }
 
